@@ -8,7 +8,7 @@ from aiogram.types import Message
 
 import db
 from keyboards import activities_kb, main_kb
-from texts import T, BTN_ACTIVITIES, BTN_HISTORY, activity_name
+from texts import T, BTN_ACTIVITIES, BTN_HISTORY
 
 log = logging.getLogger(__name__)
 router = Router()
@@ -39,7 +39,6 @@ async def show_activities(message: Message, state: FSMContext, pool: asyncpg.Poo
 
 
 @router.message(F.text.in_(BTN_HISTORY), StateFilter(None))
-async def show_history_entry(message: Message, pool: asyncpg.Pool) -> None:
-    from handlers.history import send_history
-    lang = await db.get_lang(pool, message.from_user.id)
-    await send_history(message, pool, lang, message.from_user.id)
+async def old_history_btn(message: Message, pool: asyncpg.Pool) -> None:
+    # Old reply button — redirect to activities where records are now located
+    await show_activities(message, None, pool)

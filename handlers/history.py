@@ -88,6 +88,14 @@ async def send_history(
         await target.answer()
 
 
+# --- History entry from activity detail screen ---
+
+@router.callback_query(F.data.startswith("act_history:"))
+async def cb_act_history(callback: CallbackQuery, pool: asyncpg.Pool) -> None:
+    lang = await db.get_lang(pool, callback.from_user.id)
+    await send_history(callback, pool, lang, callback.from_user.id)
+
+
 # --- History entry from callback (back button) ---
 
 @router.callback_query(F.data == "hist_back")

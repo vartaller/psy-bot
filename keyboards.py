@@ -9,15 +9,7 @@ from aiogram.types import (
     ReplyKeyboardMarkup,
 )
 
-from texts import T, tz_name, activity_name, BTN_ACTIVITIES, BTN_HISTORY
-
-TIMEZONES = [
-    "Europe/Kyiv",
-    "Europe/Moscow",
-    "Asia/Yekaterinburg",
-    "Asia/Novosibirsk",
-    "Asia/Vladivostok",
-]
+from texts import T, tz_name, activity_name, BTN_ACTIVITIES, TIMEZONES
 
 
 def lang_kb() -> InlineKeyboardMarkup:
@@ -29,10 +21,7 @@ def lang_kb() -> InlineKeyboardMarkup:
 
 def main_kb(lang: str) -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text=T(lang, "btn_activities")),
-             KeyboardButton(text=T(lang, "btn_history"))],
-        ],
+        keyboard=[[KeyboardButton(text=T(lang, "btn_activities"))]],
         resize_keyboard=True,
     )
 
@@ -92,6 +81,10 @@ def activity_detail_kb(lang: str, slug: str, subscription) -> InlineKeyboardMark
             callback_data=f"start_session:{slug}",
         )])
         rows.append([InlineKeyboardButton(
+            text=T(lang, "btn_records"),
+            callback_data=f"act_history:{slug}",
+        )])
+        rows.append([InlineKeyboardButton(
             text=T(lang, "btn_change_reminder", time=t, tz=tz),
             callback_data=f"change_time:{slug}",
         )])
@@ -109,12 +102,10 @@ def activity_detail_kb(lang: str, slug: str, subscription) -> InlineKeyboardMark
 
 
 def tz_kb(lang: str, slug: str, time_str: str) -> InlineKeyboardMarkup:
-    rows = []
-    for tz in TIMEZONES:
-        rows.append([InlineKeyboardButton(
-            text=tz_name(lang, tz),
-            callback_data=f"sub_tz:{slug}:{time_str}:{tz}",
-        )])
+    rows = [
+        [InlineKeyboardButton(text=label, callback_data=f"sub_tz:{slug}:{time_str}:{tz_id}")]
+        for tz_id, label in TIMEZONES
+    ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 

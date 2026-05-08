@@ -1,5 +1,43 @@
 from __future__ import annotations
 
+# (tz_id, display_label) — label is language-neutral (city names are similar in uk/ru)
+TIMEZONES: list[tuple[str, str]] = [
+    ("Europe/Kyiv",         "🇺🇦 Київ / Киев          UTC+2/+3"),
+    ("Europe/Minsk",        "🇧🇾 Мінськ / Минск        UTC+3"),
+    ("Europe/Moscow",       "🇷🇺 Москва                UTC+3"),
+    ("Europe/Samara",       "🇷🇺 Самара                UTC+4"),
+    ("Asia/Yekaterinburg",  "🇷🇺 Єкатеринбург          UTC+5"),
+    ("Asia/Omsk",           "🇷🇺 Омськ / Омск          UTC+6"),
+    ("Asia/Novosibirsk",    "🇷🇺 Новосибірськ          UTC+7"),
+    ("Asia/Krasnoyarsk",    "🇷🇺 Красноярськ           UTC+7"),
+    ("Asia/Irkutsk",        "🇷🇺 Іркутськ / Иркутск   UTC+8"),
+    ("Asia/Yakutsk",        "🇷🇺 Якутськ / Якутск     UTC+9"),
+    ("Asia/Vladivostok",    "🇷🇺 Владивосток           UTC+10"),
+    ("Asia/Magadan",        "🇷🇺 Магадан               UTC+11"),
+    ("Asia/Kamchatka",      "🇷🇺 Камчатка              UTC+12"),
+    ("Asia/Tbilisi",        "🇬🇪 Тбілісі / Тбилиси    UTC+4"),
+    ("Asia/Baku",           "🇦🇿 Баку                  UTC+4"),
+    ("Asia/Yerevan",        "🇦🇲 Єреван / Ереван       UTC+4"),
+    ("Asia/Tashkent",       "🇺🇿 Ташкент               UTC+5"),
+    ("Asia/Almaty",         "🇰🇿 Алмати / Алматы       UTC+6"),
+    ("Europe/London",       "🇬🇧 Лондон                UTC+0/+1"),
+    ("Europe/Berlin",       "🇩🇪 Берлін / Берлин       UTC+1/+2"),
+    ("Europe/Paris",        "🇫🇷 Париж                 UTC+1/+2"),
+    ("Europe/Istanbul",     "🇹🇷 Стамбул               UTC+3"),
+    ("Asia/Dubai",          "🇦🇪 Дубай                 UTC+4"),
+    ("Asia/Jerusalem",      "🇮🇱 Єрусалим              UTC+2/+3"),
+    ("Asia/Bangkok",        "🇹🇭 Бангкок               UTC+7"),
+    ("Asia/Singapore",      "🇸🇬 Сінгапур              UTC+8"),
+    ("Asia/Tokyo",          "🇯🇵 Токіо / Токио         UTC+9"),
+    ("America/New_York",    "🇺🇸 Нью-Йорк              UTC-5/-4"),
+    ("America/Chicago",     "🇺🇸 Чикаго                UTC-6/-5"),
+    ("America/Los_Angeles", "🇺🇸 Лос-Анджелес          UTC-8/-7"),
+    ("Australia/Sydney",    "🇦🇺 Сідней / Сидней       UTC+10/+11"),
+    ("Pacific/Auckland",    "🇳🇿 Окленд                UTC+12/+13"),
+]
+
+_TZ_DISPLAY: dict[str, str] = {tz_id: label for tz_id, label in TIMEZONES}
+
 TEXTS: dict[str, dict] = {
     "uk": {
         # Language selection
@@ -13,7 +51,8 @@ TEXTS: dict[str, dict] = {
 
         # Main menu buttons
         "btn_activities": "📚 Заняття",
-        "btn_history": "📊 Мої записи",
+        "btn_history": "📊 Мої записи",   # kept for backward-compat with old keyboards
+        "btn_records": "📊 Мої записи",   # inline button inside activity detail
 
         # General
         "back": "← Назад",
@@ -51,14 +90,6 @@ TEXTS: dict[str, dict] = {
         "unsub_done": "Відписано.",
 
         # Timezone display names
-        "tz_names": {
-            "Europe/Kyiv":          "Київ (UTC+2/+3)",
-            "Europe/Moscow":        "Москва (UTC+3)",
-            "Asia/Yekaterinburg":   "Єкатеринбург (UTC+5)",
-            "Asia/Novosibirsk":     "Новосибірськ (UTC+7)",
-            "Asia/Vladivostok":     "Владивосток (UTC+10)",
-        },
-
         # Thinking pattern — intro and cancel
         "tp_intro": (
             "🧠 <b>Аналіз важливої події дня</b>\n\n"
@@ -182,7 +213,8 @@ TEXTS: dict[str, dict] = {
         ),
 
         "btn_activities": "📚 Занятия",
-        "btn_history": "📊 Мои записи",
+        "btn_history": "📊 Мои записи",   # kept for backward-compat with old keyboards
+        "btn_records": "📊 Мои записи",   # inline button inside activity detail
 
         "back": "← Назад",
         "cancel_btn": "✖️ Отмена",
@@ -214,14 +246,6 @@ TEXTS: dict[str, dict] = {
         "time_updated": "⏰ Время напоминания изменено: {time} ({tz}).",
         "unsub_confirm": "Отписаться от занятия «{name}»?",
         "unsub_done": "Отписка выполнена.",
-
-        "tz_names": {
-            "Europe/Kyiv":          "Киев (UTC+2/+3)",
-            "Europe/Moscow":        "Москва (UTC+3)",
-            "Asia/Yekaterinburg":   "Екатеринбург (UTC+5)",
-            "Asia/Novosibirsk":     "Новосибирск (UTC+7)",
-            "Asia/Vladivostok":     "Владивосток (UTC+10)",
-        },
 
         "tp_intro": (
             "🧠 <b>Анализ важного события дня</b>\n\n"
@@ -347,7 +371,7 @@ def T(lang: str, key: str, *args, **kwargs):
 
 
 def tz_name(lang: str, tz: str) -> str:
-    return TEXTS[lang]["tz_names"].get(tz, tz)
+    return _TZ_DISPLAY.get(tz, tz)
 
 
 def activity_name(lang: str, row) -> str:
