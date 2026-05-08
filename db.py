@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date, timedelta
+from datetime import date, time as time_type, timedelta
 
 import asyncpg
 
@@ -78,14 +78,16 @@ async def upsert_subscription(
     reminder_time: str,
     timezone: str,
 ) -> None:
+    h, m = map(int, reminder_time.split(":"))
+    t = time_type(h, m)
     await pool.execute(
         """
         INSERT INTO subscriptions (user_id, activity_type_id, reminder_time, timezone, is_active)
-        VALUES ($1, $2, $3::time, $4, TRUE)
+        VALUES ($1, $2, $3, $4, TRUE)
         ON CONFLICT (user_id, activity_type_id)
-        DO UPDATE SET reminder_time = $3::time, timezone = $4, is_active = TRUE, subscribed_at = NOW()
+        DO UPDATE SET reminder_time = $3, timezone = $4, is_active = TRUE, subscribed_at = NOW()
         """,
-        user_id, activity_type_id, reminder_time, timezone,
+        user_id, activity_type_id, t, timezone,
     )
 
 
