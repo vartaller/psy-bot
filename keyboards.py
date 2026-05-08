@@ -133,17 +133,11 @@ def already_done_kb(lang: str, slug: str, session_date: str) -> InlineKeyboardMa
 
 
 def history_kb(lang: str, slug: str, recent_sessions: list, today: date) -> InlineKeyboardMarkup:
-    # Build lookup: session_date -> session record
-    by_date = {s["session_date"]: s for s in recent_sessions}
-
     rows = []
-    for offset in range(5):
-        d = today - timedelta(days=offset)
-        s = by_date.get(d)
-        if s and s["is_complete"]:
-            label = T(lang, "hist_day_done", date=d.strftime("%d.%m"))
-        else:
-            label = T(lang, "hist_day_miss", date=d.strftime("%d.%m"))
+    for s in recent_sessions:
+        d = s["session_date"]
+        label = T(lang, "hist_day_done" if s["is_complete"] else "hist_day_miss",
+                  date=d.strftime("%d.%m"))
         rows.append([InlineKeyboardButton(
             text=label,
             callback_data=f"hist_day:{slug}:{d.isoformat()}",
