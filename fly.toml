@@ -1,0 +1,15 @@
+# fly.toml app configuration file generated for psy-bot-shy-hill-2279 on 2026-05-08T16:43:02+02:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'psy-bot-shy-hill-2279'
+primary_region = 'fra'
+
+[build]
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 512
