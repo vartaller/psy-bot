@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from datetime import date
 
@@ -133,7 +134,8 @@ async def cb_hist_day(callback: CallbackQuery, pool: asyncpg.Pool) -> None:
         await callback.answer()
         return
 
-    responses = dict(session["responses"])
+    raw = session["responses"]
+    responses = json.loads(raw) if isinstance(raw, str) else dict(raw)
     text_fields = ("sensation", "feeling", "emotion", "impression", "meaning", "idea")
     uid = callback.from_user.id
     for field in text_fields:
@@ -197,7 +199,8 @@ async def receive_date(message: Message, state: FSMContext, pool: asyncpg.Pool) 
         )
         return
 
-    responses = dict(session["responses"])
+    raw = session["responses"]
+    responses = json.loads(raw) if isinstance(raw, str) else dict(raw)
     text_fields = ("sensation", "feeling", "emotion", "impression", "meaning", "idea")
     uid = message.from_user.id
     for field in text_fields:
