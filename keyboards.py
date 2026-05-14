@@ -106,11 +106,20 @@ def activity_detail_kb(lang: str, slug: str, subscription) -> InlineKeyboardMark
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
+def reminder_time_webapp_kb(lang: str, slug: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(
+            text=T(lang, "btn_pick_reminder_time"),
+            web_app=WebAppInfo(url=f"{WEBAPP_BASE_URL}/webapp/time-picker.html?mode=reminder"),
+        ),
+    ]])
+
+
 def tz_webapp_kb(lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(
             text=T(lang, "btn_pick_current_time"),
-            web_app=WebAppInfo(url=f"{WEBAPP_BASE_URL}/webapp/time-picker.html"),
+            web_app=WebAppInfo(url=f"{WEBAPP_BASE_URL}/webapp/time-picker.html?mode=tz"),
         ),
     ]])
 

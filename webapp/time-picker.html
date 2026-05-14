@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Поточний час</title>
+  <title>Вибір часу</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -96,7 +96,7 @@
   </style>
 </head>
 <body>
-  <h2 id="title">Вкажіть, котра зараз у вас година і хвилини</h2>
+  <h2 id="title"></h2>
 
   <div class="picker">
     <div class="unit">
@@ -119,17 +119,39 @@
     tg.expand();
     tg.disableClosingConfirmation();
 
-    // Set language-aware title
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('mode') || 'tz';
     const lang = tg.initDataUnsafe?.user?.language_code || 'uk';
-    if (lang === 'ru') {
-      document.getElementById('title').textContent = 'Укажите, сколько сейчас у вас часов и минут';
-      document.getElementById('okBtn').textContent = 'Готово';
-    }
 
-    // Init with current local time
-    const now = new Date();
-    let h = now.getHours();
-    let m = Math.round(now.getMinutes() / 5) * 5 % 60;
+    const TITLES = {
+      reminder: {
+        uk: 'Оберіть час щоденного нагадування',
+        ru: 'Выберите время ежедневного напоминания',
+      },
+      tz: {
+        uk: 'Вкажіть, котра зараз у вас година і хвилини',
+        ru: 'Укажите, сколько сейчас у вас часов и минут',
+      },
+    };
+
+    const OK_LABELS = {
+      uk: 'Готово',
+      ru: 'Готово',
+    };
+
+    document.getElementById('title').textContent = (TITLES[mode] || TITLES.tz)[lang] || (TITLES[mode] || TITLES.tz).uk;
+    document.getElementById('okBtn').textContent = OK_LABELS[lang] || 'OK';
+
+    // For reminder: default 09:00; for tz: default to current local time
+    let h, m;
+    if (mode === 'reminder') {
+      h = 9;
+      m = 0;
+    } else {
+      const now = new Date();
+      h = now.getHours();
+      m = Math.round(now.getMinutes() / 5) * 5 % 60;
+    }
 
     function render() {
       document.getElementById('hVal').textContent = String(h).padStart(2, '0');
