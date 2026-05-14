@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Поточний час</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--tg-theme-bg-color, #ffffff);
+      color: var(--tg-theme-text-color, #000000);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+
+    h2 {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--tg-theme-hint-color, #888);
+      margin-bottom: 32px;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .picker {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+
+    .separator {
+      font-size: 42px;
+      font-weight: 300;
+      color: var(--tg-theme-text-color, #000);
+      line-height: 1;
+      padding-bottom: 8px;
+    }
+
+    .unit {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .unit button {
+      width: 72px;
+      height: 44px;
+      border-radius: 12px;
+      border: none;
+      background: var(--tg-theme-button-color, #2481cc);
+      color: var(--tg-theme-button-text-color, #ffffff);
+      font-size: 22px;
+      font-weight: 300;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .unit button:active { opacity: 0.7; }
+
+    .value {
+      font-size: 52px;
+      font-weight: 200;
+      min-width: 72px;
+      text-align: center;
+      line-height: 1;
+      color: var(--tg-theme-text-color, #000);
+    }
+
+    .confirm-btn {
+      width: 100%;
+      max-width: 280px;
+      height: 52px;
+      border-radius: 14px;
+      border: none;
+      background: var(--tg-theme-button-color, #2481cc);
+      color: var(--tg-theme-button-text-color, #ffffff);
+      font-size: 17px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .confirm-btn:active { opacity: 0.8; }
+  </style>
+</head>
+<body>
+  <h2 id="title">Вкажіть, котра зараз у вас година і хвилини</h2>
+
+  <div class="picker">
+    <div class="unit">
+      <button onclick="change('h', 1)">+</button>
+      <div class="value" id="hVal">00</div>
+      <button onclick="change('h', -1)">−</button>
+    </div>
+    <div class="separator">:</div>
+    <div class="unit">
+      <button onclick="change('m', 5)">+</button>
+      <div class="value" id="mVal">00</div>
+      <button onclick="change('m', -5)">−</button>
+    </div>
+  </div>
+
+  <button class="confirm-btn" id="okBtn" onclick="confirm()">OK</button>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+    tg.disableClosingConfirmation();
+
+    // Set language-aware title
+    const lang = tg.initDataUnsafe?.user?.language_code || 'uk';
+    if (lang === 'ru') {
+      document.getElementById('title').textContent = 'Укажите, сколько сейчас у вас часов и минут';
+      document.getElementById('okBtn').textContent = 'Готово';
+    }
+
+    // Init with current local time
+    const now = new Date();
+    let h = now.getHours();
+    let m = Math.round(now.getMinutes() / 5) * 5 % 60;
+
+    function render() {
+      document.getElementById('hVal').textContent = String(h).padStart(2, '0');
+      document.getElementById('mVal').textContent = String(m).padStart(2, '0');
+    }
+
+    function change(unit, delta) {
+      if (unit === 'h') {
+        h = (h + delta + 24) % 24;
+      } else {
+        m = (m + delta + 60) % 60;
+      }
+      render();
+    }
+
+    function confirm() {
+      tg.sendData(JSON.stringify({ hour: h, minute: m }));
+    }
+
+    render();
+  </script>
+</body>
+</html>

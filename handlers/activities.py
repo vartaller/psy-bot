@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 
@@ -13,10 +14,10 @@ from keyboards import (
     activities_kb,
     activity_detail_kb,
     confirm_unsub_kb,
-    tz_kb,
+    tz_webapp_kb,
 )
 from states import SubscribeStates
-from texts import T, activity_name, activity_desc, tz_name
+from texts import T, activity_name, activity_desc, tz_name, find_tz_by_current_time
 
 log = logging.getLogger(__name__)
 router = Router()
@@ -86,14 +87,14 @@ async def cb_act_detail(callback: CallbackQuery, pool: asyncpg.Pool) -> None:
     await _show_activity_detail(callback, pool, lang, slug, callback.from_user.id)
 
 
-# --- Subscribe: ask for time ---
+# --- Subscribe: ask for reminder time ---
 
 @router.callback_query(F.data.startswith("sub:"))
 async def cb_subscribe(callback: CallbackQuery, state: FSMContext, pool: asyncpg.Pool) -> None:
     lang = await db.get_lang(pool, callback.from_user.id)
     slug = callback.data.split(":", 1)[1]
     await state.set_state(SubscribeStates.waiting_time)
-    await state.update_data(slug=slug, action="subscribe")
+    await state.update_data(slug=slug)
     await callback.message.answer(T(lang, "sub_ask_time"), parse_mode="HTML")
     await callback.answer()
 
@@ -103,10 +104,12 @@ async def cb_change_time(callback: CallbackQuery, state: FSMContext, pool: async
     lang = await db.get_lang(pool, callback.from_user.id)
     slug = callback.data.split(":", 1)[1]
     await state.set_state(SubscribeStates.waiting_time)
-    await state.update_data(slug=slug, action="change")
+    await state.update_data(slug=slug)
     await callback.message.answer(T(lang, "sub_ask_time"), parse_mode="HTML")
     await callback.answer()
 
+
+# --- Reminder time received: ask current time via Web App ---
 
 @router.message(SubscribeStates.waiting_time)
 async def receive_reminder_time(message: Message, state: FSMContext, pool: asyncpg.Pool) -> None:
@@ -120,41 +123,52 @@ async def receive_reminder_time(message: Message, state: FSMContext, pool: async
     data = await state.get_data()
     slug = data["slug"]
     await state.update_data(time_str=text)
-    await state.clear()  # clear FSM so timezone callback doesn't need state
+    await state.set_state(SubscribeStates.waiting_tz)
 
-    await message.answer(T(lang, "sub_ask_tz"), reply_markup=tz_kb(lang, slug, text))
+    await message.answer(
+        T(lang, "sub_ask_tz_webapp"),
+        reply_markup=tz_webapp_kb(lang),
+        parse_mode="HTML",
+    )
 
 
-# --- Timezone selected: save subscription ---
+# --- Web App data received: detect timezone, save subscription ---
 
-@router.callback_query(F.data.startswith("sub_tz:"))
-async def cb_timezone(callback: CallbackQuery, pool: asyncpg.Pool) -> None:
-    lang = await db.get_lang(pool, callback.from_user.id)
-    # format: sub_tz:slug:HH:MM:TZ/Region
-    parts = callback.data.split(":")
-    # parts[0]=sub_tz, parts[1]=slug, parts[2]=HH, parts[3]=MM, parts[4:]=TZ (may contain colon)
-    slug = parts[1]
-    time_str = f"{parts[2]}:{parts[3]}"
-    timezone = ":".join(parts[4:])
-
-    act = await db.get_activity_by_slug(pool, slug)
-    if not act:
-        await callback.answer()
-        return
-
-    await db.upsert_subscription(pool, callback.from_user.id, act["id"], time_str, timezone)
-    tz_display = tz_name(lang, timezone)
-    log.info("user=%d subscribed slug=%s time=%s tz=%s", callback.from_user.id, slug, time_str, timezone)
+@router.message(StateFilter(SubscribeStates.waiting_tz), F.web_app_data)
+async def receive_current_time(message: Message, state: FSMContext, pool: asyncpg.Pool) -> None:
+    lang = await db.get_lang(pool, message.from_user.id)
 
     try:
-        await callback.message.edit_text(
-            T(lang, "sub_done", time=time_str, tz=tz_display),
-            parse_mode="HTML",
-        )
-    except TelegramBadRequest:
-        pass
-    await callback.answer()
-    await _show_activity_detail(callback, pool, lang, slug, callback.from_user.id)
+        payload = json.loads(message.web_app_data.data)
+        hour = int(payload["hour"])
+        minute = int(payload["minute"])
+    except (KeyError, ValueError, TypeError):
+        await message.answer(T(lang, "error"))
+        return
+
+    data = await state.get_data()
+    slug = data.get("slug")
+    time_str = data.get("time_str")
+    await state.clear()
+
+    if not slug or not time_str:
+        await message.answer(T(lang, "error"))
+        return
+
+    timezone = find_tz_by_current_time(hour, minute)
+    act = await db.get_activity_by_slug(pool, slug)
+    if not act:
+        return
+
+    await db.upsert_subscription(pool, message.from_user.id, act["id"], time_str, timezone)
+    tz_display = tz_name(lang, timezone)
+    log.info("user=%d subscribed slug=%s time=%s tz=%s", message.from_user.id, slug, time_str, timezone)
+
+    await message.answer(
+        T(lang, "sub_tz_detected", tz=tz_display) + "\n\n" + T(lang, "sub_done", time=time_str, tz=tz_display),
+        parse_mode="HTML",
+    )
+    await _show_activity_detail(message, pool, lang, slug, message.from_user.id)
 
 
 # --- Unsubscribe ---
