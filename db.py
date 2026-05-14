@@ -43,6 +43,19 @@ async def set_lang(pool: asyncpg.Pool, user_id: int, lang: str) -> None:
     _lang_cache[user_id] = lang
 
 
+async def get_timezone(pool: asyncpg.Pool, user_id: int) -> str:
+    row = await pool.fetchrow("SELECT timezone FROM users WHERE id = $1", user_id)
+    return row["timezone"] if row else "Europe/Kyiv"
+
+
+async def set_timezone(pool: asyncpg.Pool, user_id: int, timezone: str) -> None:
+    await pool.execute(
+        "INSERT INTO users (id, timezone) VALUES ($1, $2) "
+        "ON CONFLICT (id) DO UPDATE SET timezone = $2",
+        user_id, timezone,
+    )
+
+
 # ---------- activity types ----------
 
 async def get_activity_types(pool: asyncpg.Pool) -> list[asyncpg.Record]:
@@ -76,18 +89,17 @@ async def upsert_subscription(
     user_id: int,
     activity_type_id: int,
     reminder_time: str,
-    timezone: str,
 ) -> None:
     h, m = map(int, reminder_time.split(":"))
     t = time_type(h, m)
     await pool.execute(
         """
-        INSERT INTO subscriptions (user_id, activity_type_id, reminder_time, timezone, is_active)
-        VALUES ($1, $2, $3, $4, TRUE)
+        INSERT INTO subscriptions (user_id, activity_type_id, reminder_time, is_active)
+        VALUES ($1, $2, $3, TRUE)
         ON CONFLICT (user_id, activity_type_id)
-        DO UPDATE SET reminder_time = $3, timezone = $4, is_active = TRUE, subscribed_at = NOW()
+        DO UPDATE SET reminder_time = $3, is_active = TRUE, subscribed_at = NOW()
         """,
-        user_id, activity_type_id, t, timezone,
+        user_id, activity_type_id, t,
     )
 
 
@@ -101,7 +113,7 @@ async def deactivate_subscription(pool: asyncpg.Pool, user_id: int, activity_typ
 async def get_all_active_subscriptions(pool: asyncpg.Pool) -> list[asyncpg.Record]:
     return await pool.fetch(
         """
-        SELECT s.*, u.id AS uid
+        SELECT s.*, u.timezone
         FROM subscriptions s
         JOIN users u ON u.id = s.user_id
         WHERE s.is_active = TRUE

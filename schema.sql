@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS users (
     username   TEXT,
     first_name TEXT,
     language   VARCHAR(2) NOT NULL DEFAULT 'uk',
+    timezone   VARCHAR(50) NOT NULL DEFAULT 'Europe/Kyiv',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -22,7 +23,6 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     user_id          BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     activity_type_id INTEGER NOT NULL REFERENCES activity_types(id),
     reminder_time    TIME NOT NULL,
-    timezone         VARCHAR(50) NOT NULL DEFAULT 'Europe/Kyiv',
     is_active        BOOLEAN NOT NULL DEFAULT TRUE,
     subscribed_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(user_id, activity_type_id)

@@ -50,6 +50,7 @@ with open(os.path.join(_HERE, "texts.json"), encoding="utf-8") as _f:
 
 BTN_ACTIVITIES = {t["btn_activities"] for t in TEXTS.values()}
 BTN_HISTORY    = {t["btn_history"]    for t in TEXTS.values()}
+BTN_PROFILE    = {t["btn_profile"]    for t in TEXTS.values()}
 
 
 def T(lang: str, key: str, *args, **kwargs):

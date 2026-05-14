@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"D:\\\\Programming\\\\My\\\\psy-bot\\\\.claude\\\\worktrees\\\\elegant-lovelace-d8dd9b\" -Recurse -Force)",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)",
+      "Bash(ConvertTo-Json -Depth 100)",
+      "Bash(Out-String)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}

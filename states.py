@@ -1,8 +1,15 @@
 from aiogram.fsm.state import State, StatesGroup
 
 
+class OnboardingStates(StatesGroup):
+    waiting_tz = State()
+
+
 class SubscribeStates(StatesGroup):
     waiting_time = State()
+
+
+class ProfileStates(StatesGroup):
     waiting_tz = State()
 
 
