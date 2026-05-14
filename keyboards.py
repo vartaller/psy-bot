@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
-
 import os
+from datetime import date, timedelta
 
 from aiogram.types import (
     InlineKeyboardButton,
@@ -13,7 +12,7 @@ from aiogram.types import (
     WebAppInfo,
 )
 
-from texts import T, tz_name, activity_name, BTN_ACTIVITIES
+from texts import T, tz_name, activity_name, BTN_ACTIVITIES, BTN_PROFILE
 
 WEBAPP_BASE_URL = os.environ.get("WEBAPP_BASE_URL", "https://psy-bot-shy-hill-2279.fly.dev")
 
@@ -27,9 +26,32 @@ def lang_kb() -> InlineKeyboardMarkup:
 
 def main_kb(lang: str) -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text=T(lang, "btn_activities"))]],
+        keyboard=[
+            [KeyboardButton(text=T(lang, "btn_activities"))],
+            [KeyboardButton(text=T(lang, "btn_profile"))],
+        ],
         resize_keyboard=True,
     )
+
+
+def tz_webapp_kb(lang: str) -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(
+            text=T(lang, "btn_pick_current_time"),
+            web_app=WebAppInfo(url=f"{WEBAPP_BASE_URL}/webapp/time-picker.html?mode=tz"),
+        )]],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+
+
+def profile_kb(lang: str, tz_display: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text=T(lang, "btn_change_tz", tz=tz_display),
+            callback_data="profile_change_tz",
+        )],
+    ])
 
 
 def scale_kb(lang: str, field: str) -> InlineKeyboardMarkup:
@@ -41,7 +63,7 @@ def scale_kb(lang: str, field: str) -> InlineKeyboardMarkup:
 
 
 def choice_kb(lang: str, field: str) -> InlineKeyboardMarkup:
-    options: list[str] = T(lang, f"{field}s")  # "feelings" or "emotions"
+    options: list[str] = T(lang, f"{field}s")
     rows = []
     row = []
     for i, opt in enumerate(options):
@@ -81,7 +103,6 @@ def activity_detail_kb(lang: str, slug: str, subscription) -> InlineKeyboardMark
     rows = []
     if subscription and subscription["is_active"]:
         t = subscription["reminder_time"].strftime("%H:%M")
-        tz = tz_name(lang, subscription["timezone"])
         rows.append([InlineKeyboardButton(
             text=T(lang, "btn_start_now"),
             callback_data=f"start_session:{slug}",
@@ -91,7 +112,7 @@ def activity_detail_kb(lang: str, slug: str, subscription) -> InlineKeyboardMark
             callback_data=f"act_history:{slug}",
         )])
         rows.append([InlineKeyboardButton(
-            text=T(lang, "btn_change_reminder", time=t, tz=tz),
+            text=T(lang, "btn_change_reminder", time=t),
             callback_data=f"change_time:{slug}",
         )])
         rows.append([InlineKeyboardButton(
@@ -112,17 +133,6 @@ def reminder_time_webapp_kb(lang: str, slug: str) -> ReplyKeyboardMarkup:
         keyboard=[[KeyboardButton(
             text=T(lang, "btn_pick_reminder_time"),
             web_app=WebAppInfo(url=f"{WEBAPP_BASE_URL}/webapp/time-picker.html?mode=reminder"),
-        )]],
-        resize_keyboard=True,
-        one_time_keyboard=True,
-    )
-
-
-def tz_webapp_kb(lang: str) -> ReplyKeyboardMarkup:
-    return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(
-            text=T(lang, "btn_pick_current_time"),
-            web_app=WebAppInfo(url=f"{WEBAPP_BASE_URL}/webapp/time-picker.html?mode=tz"),
         )]],
         resize_keyboard=True,
         one_time_keyboard=True,
