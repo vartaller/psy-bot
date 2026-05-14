@@ -9,6 +9,7 @@ from aiogram.types import (
     InlineKeyboardMarkup,
     KeyboardButton,
     ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
     WebAppInfo,
 )
 
@@ -106,22 +107,26 @@ def activity_detail_kb(lang: str, slug: str, subscription) -> InlineKeyboardMark
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def reminder_time_webapp_kb(lang: str, slug: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(
+def reminder_time_webapp_kb(lang: str, slug: str) -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(
             text=T(lang, "btn_pick_reminder_time"),
             web_app=WebAppInfo(url=f"{WEBAPP_BASE_URL}/webapp/time-picker.html?mode=reminder"),
-        ),
-    ]])
+        )]],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
 
 
-def tz_webapp_kb(lang: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(
+def tz_webapp_kb(lang: str) -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(
             text=T(lang, "btn_pick_current_time"),
             web_app=WebAppInfo(url=f"{WEBAPP_BASE_URL}/webapp/time-picker.html?mode=tz"),
-        ),
-    ]])
+        )]],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
 
 
 def start_analysis_kb(lang: str) -> InlineKeyboardMarkup:
