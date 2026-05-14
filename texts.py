@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime
+
+import pytz
 
 # (tz_id, display_label) — label is language-neutral (city names are similar in uk/ru)
 TIMEZONES: list[tuple[str, str]] = [
@@ -61,6 +64,30 @@ def T(lang: str, key: str, *args, **kwargs):
 
 def tz_name(lang: str, tz: str) -> str:
     return _TZ_DISPLAY.get(tz, tz)
+
+
+def find_tz_by_current_time(user_hour: int, user_minute: int) -> str:
+    """Detect timezone by comparing user's current time to UTC."""
+    now_utc = datetime.now(pytz.utc)
+    user_total = user_hour * 60 + user_minute
+    utc_total = now_utc.hour * 60 + now_utc.minute
+
+    diff = user_total - utc_total
+    if diff > 780:
+        diff -= 1440
+    elif diff < -720:
+        diff += 1440
+
+    best_tz = TIMEZONES[0][0]
+    best_delta = float("inf")
+    for tz_id, _ in TIMEZONES:
+        tz_offset_min = int(pytz.timezone(tz_id).utcoffset(now_utc.replace(tzinfo=None)).total_seconds() / 60)
+        delta = abs(tz_offset_min - diff)
+        if delta < best_delta:
+            best_delta = delta
+            best_tz = tz_id
+
+    return best_tz
 
 
 def activity_name(lang: str, row) -> str:

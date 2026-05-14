@@ -2,14 +2,19 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
+import os
+
 from aiogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     KeyboardButton,
     ReplyKeyboardMarkup,
+    WebAppInfo,
 )
 
-from texts import T, tz_name, activity_name, BTN_ACTIVITIES, TIMEZONES
+from texts import T, tz_name, activity_name, BTN_ACTIVITIES
+
+WEBAPP_BASE_URL = os.environ.get("WEBAPP_BASE_URL", "https://psy-bot-shy-hill-2279.fly.dev")
 
 
 def lang_kb() -> InlineKeyboardMarkup:
@@ -101,12 +106,13 @@ def activity_detail_kb(lang: str, slug: str, subscription) -> InlineKeyboardMark
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def tz_kb(lang: str, slug: str, time_str: str) -> InlineKeyboardMarkup:
-    rows = [
-        [InlineKeyboardButton(text=label, callback_data=f"sub_tz:{slug}:{time_str}:{tz_id}")]
-        for tz_id, label in TIMEZONES
-    ]
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+def tz_webapp_kb(lang: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(
+            text=T(lang, "btn_pick_current_time"),
+            web_app=WebAppInfo(url=f"{WEBAPP_BASE_URL}/webapp/time-picker.html"),
+        ),
+    ]])
 
 
 def start_analysis_kb(lang: str) -> InlineKeyboardMarkup:

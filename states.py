@@ -3,6 +3,7 @@ from aiogram.fsm.state import State, StatesGroup
 
 class SubscribeStates(StatesGroup):
     waiting_time = State()
+    waiting_tz = State()
 
 
 class ThinkingPattern(StatesGroup):
