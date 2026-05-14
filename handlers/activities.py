@@ -1,6 +1,5 @@
 import json
 import logging
-import re
 
 import asyncpg
 from aiogram import F, Router
@@ -14,6 +13,7 @@ from keyboards import (
     activities_kb,
     activity_detail_kb,
     confirm_unsub_kb,
+    reminder_time_webapp_kb,
     tz_webapp_kb,
 )
 from states import SubscribeStates
@@ -21,8 +21,6 @@ from texts import T, activity_name, activity_desc, tz_name, find_tz_by_current_t
 
 log = logging.getLogger(__name__)
 router = Router()
-
-_TIME_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
 
 
 async def _show_activity_detail(target, pool: asyncpg.Pool, lang: str, slug: str, user_id: int) -> None:
@@ -87,7 +85,7 @@ async def cb_act_detail(callback: CallbackQuery, pool: asyncpg.Pool) -> None:
     await _show_activity_detail(callback, pool, lang, slug, callback.from_user.id)
 
 
-# --- Subscribe: ask for reminder time ---
+# --- Subscribe: show reminder time picker ---
 
 @router.callback_query(F.data.startswith("sub:"))
 async def cb_subscribe(callback: CallbackQuery, state: FSMContext, pool: asyncpg.Pool) -> None:
@@ -95,7 +93,11 @@ async def cb_subscribe(callback: CallbackQuery, state: FSMContext, pool: asyncpg
     slug = callback.data.split(":", 1)[1]
     await state.set_state(SubscribeStates.waiting_time)
     await state.update_data(slug=slug)
-    await callback.message.answer(T(lang, "sub_ask_time"), parse_mode="HTML")
+    await callback.message.answer(
+        T(lang, "sub_ask_time"),
+        reply_markup=reminder_time_webapp_kb(lang, slug),
+        parse_mode="HTML",
+    )
     await callback.answer()
 
 
@@ -105,24 +107,30 @@ async def cb_change_time(callback: CallbackQuery, state: FSMContext, pool: async
     slug = callback.data.split(":", 1)[1]
     await state.set_state(SubscribeStates.waiting_time)
     await state.update_data(slug=slug)
-    await callback.message.answer(T(lang, "sub_ask_time"), parse_mode="HTML")
+    await callback.message.answer(
+        T(lang, "sub_ask_time"),
+        reply_markup=reminder_time_webapp_kb(lang, slug),
+        parse_mode="HTML",
+    )
     await callback.answer()
 
 
-# --- Reminder time received: ask current time via Web App ---
+# --- Reminder time picked via Web App: ask current time for timezone ---
 
-@router.message(SubscribeStates.waiting_time)
+@router.message(StateFilter(SubscribeStates.waiting_time), F.web_app_data)
 async def receive_reminder_time(message: Message, state: FSMContext, pool: asyncpg.Pool) -> None:
     lang = await db.get_lang(pool, message.from_user.id)
-    text = (message.text or "").strip()
 
-    if not _TIME_RE.match(text):
-        await message.answer(T(lang, "sub_time_invalid"), parse_mode="HTML")
+    try:
+        payload = json.loads(message.web_app_data.data)
+        hour = int(payload["hour"])
+        minute = int(payload["minute"])
+    except (KeyError, ValueError, TypeError):
+        await message.answer(T(lang, "error"))
         return
 
-    data = await state.get_data()
-    slug = data["slug"]
-    await state.update_data(time_str=text)
+    time_str = f"{hour:02d}:{minute:02d}"
+    await state.update_data(time_str=time_str)
     await state.set_state(SubscribeStates.waiting_tz)
 
     await message.answer(
