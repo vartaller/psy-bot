@@ -9,6 +9,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 import db
+from aiogram.types import ReplyKeyboardRemove
+
 from keyboards import (
     activities_kb,
     activity_detail_kb,
@@ -140,6 +142,7 @@ async def receive_reminder_time(message: Message, state: FSMContext, pool: async
     )
 
 
+
 # --- Web App data received: detect timezone, save subscription ---
 
 @router.message(StateFilter(SubscribeStates.waiting_tz), F.web_app_data)
@@ -174,6 +177,7 @@ async def receive_current_time(message: Message, state: FSMContext, pool: asyncp
 
     await message.answer(
         T(lang, "sub_tz_detected", tz=tz_display) + "\n\n" + T(lang, "sub_done", time=time_str, tz=tz_display),
+        reply_markup=ReplyKeyboardRemove(),
         parse_mode="HTML",
     )
     await _show_activity_detail(message, pool, lang, slug, message.from_user.id)
