@@ -120,11 +120,14 @@ async def _advance(target: CallbackQuery | Message, state: FSMContext,
         await db.complete_session(pool, session_id, encrypted)
         log.info("user=%d IC session=%s completed", uid, session_id)
 
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    lang = await db.get_lang(pool, uid)
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=T(lang, "back"), callback_data=f"act_detail:{IC_SLUG}"),
+    ]])
     summary = format_summary(IC_SLUG, lang, plain, data.get("session_date", ""))
-    if isinstance(target, CallbackQuery):
-        await target.message.answer(summary, parse_mode="HTML")
-    else:
-        await target.answer(summary, parse_mode="HTML")
+    msg = target.message if isinstance(target, CallbackQuery) else target
+    await msg.answer(summary, parse_mode="HTML", reply_markup=back_kb)
 
 
 def _step_index_from_state(state_str: str | None) -> int | None:
