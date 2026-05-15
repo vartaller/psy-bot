@@ -177,6 +177,10 @@ def history_kb(lang: str, slug: str, recent_sessions: list, today: date) -> Inli
         text=T(lang, "btn_enter_date"),
         callback_data=f"hist_enter_date:{slug}",
     )])
+    rows.append([InlineKeyboardButton(
+        text=T(lang, "back"),
+        callback_data=f"act_detail:{slug}",
+    )])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
