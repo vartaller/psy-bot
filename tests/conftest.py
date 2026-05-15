@@ -41,7 +41,7 @@ def pytest_collection_modifyitems(config, items):
 
 # ---------- DB fixtures ----------
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def db_pool():
     """Session-scoped asyncpg pool. Runs schema once, tears down at end."""
     if not TEST_DATABASE_URL:
@@ -62,7 +62,7 @@ async def db_pool():
     await pool.close()
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session")
 async def pool(db_pool):
     """Per-test fixture: truncates tables + clears in-process caches so tests are isolated."""
     async with db_pool.acquire() as conn:
@@ -78,7 +78,7 @@ async def pool(db_pool):
 
 # ---------- Aiogram FSM context ----------
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session")
 async def fsm():
     """Returns a fresh FSMContext backed by an in-memory storage."""
     from aiogram.fsm.context import FSMContext
