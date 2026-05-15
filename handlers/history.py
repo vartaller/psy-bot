@@ -14,6 +14,7 @@ from aiogram.types import CallbackQuery, Message
 
 import config
 import db
+from activities import FieldType, get_field, get_schema, is_encrypted_type
 from keyboards import (
     back_to_hist_action_kb,
     back_to_history_kb,
@@ -28,16 +29,17 @@ from keyboards import (
     main_kb,
 )
 from states import EditAnswer, HistoryStates
-from texts import T, activity_name, format_tp_body, tz_name
+from texts import T, activity_name, format_body, tz_name
 
 log = logging.getLogger(__name__)
 router = Router()
 
-TP_SLUG = "thinking_pattern"
+# Default slug for back-compat with old buttons that don't encode slug (e.g. plain "hist_back").
+DEFAULT_SLUG = "thinking_pattern"
 
-SCALE_FIELDS  = {"irritation", "excitement"}
-CHOICE_FIELDS = {"feeling", "emotion"}
-TEXT_FIELDS   = {"sensation", "impression", "meaning", "idea"}
+
+def _encrypted_field_names(slug: str) -> set[str]:
+    return {f.name for f in get_schema(slug) if is_encrypted_type(f.type)}
 
 
 async def _user_today_for(pool, user_id: int) -> date:
@@ -52,15 +54,16 @@ async def _get_session_and_responses(
     user_id: int,
     act_id: int,
     session_date: date,
+    slug: str,
 ) -> tuple | None:
     session = await db.get_session_by_date(pool, user_id, act_id, session_date)
     if not session or not session["is_complete"] or not session["responses"]:
         return None
     raw = session["responses"]
     responses = json.loads(raw) if isinstance(raw, str) else dict(raw)
-    for field in TEXT_FIELDS | CHOICE_FIELDS:
-        if field in responses and isinstance(responses[field], str):
-            responses[field] = config.safe_decrypt(user_id, responses[field])
+    for field_name in _encrypted_field_names(slug):
+        if field_name in responses and isinstance(responses[field_name], str):
+            responses[field_name] = config.safe_decrypt(user_id, responses[field_name])
     return session, responses
 
 
@@ -100,7 +103,7 @@ async def send_history(
     pool: asyncpg.Pool,
     lang: str,
     user_id: int,
-    slug: str = TP_SLUG,
+    slug: str = DEFAULT_SLUG,
     action: str = "view",
 ) -> None:
     act = await db.get_activity_by_slug(pool, slug)
@@ -170,7 +173,7 @@ async def send_edit_record(
         return
 
     session_date = date.fromisoformat(date_str)
-    result = await _get_session_and_responses(pool, user_id, act["id"], session_date)
+    result = await _get_session_and_responses(pool, user_id, act["id"], session_date, slug)
     display_date = session_date.strftime("%d.%m.%Y")
 
     if not result:
@@ -231,7 +234,7 @@ async def cb_hist_action(callback: CallbackQuery, pool: asyncpg.Pool) -> None:
 @router.callback_query(F.data == "hist_back")
 async def cb_hist_back(callback: CallbackQuery, pool: asyncpg.Pool) -> None:
     lang = await db.get_lang(pool, callback.from_user.id)
-    await send_action_picker(callback, pool, lang, callback.from_user.id, TP_SLUG)
+    await send_action_picker(callback, pool, lang, callback.from_user.id, DEFAULT_SLUG)
 
 
 # ============================================================
@@ -258,7 +261,7 @@ async def cb_hist_day(callback: CallbackQuery, pool: asyncpg.Pool) -> None:
         await send_edit_record(callback, pool, lang, callback.from_user.id, slug, date_str)
         return
 
-    result = await _get_session_and_responses(pool, callback.from_user.id, act["id"], session_date)
+    result = await _get_session_and_responses(pool, callback.from_user.id, act["id"], session_date, slug)
 
     if action == "delete":
         if not result:
@@ -286,7 +289,7 @@ async def cb_hist_day(callback: CallbackQuery, pool: asyncpg.Pool) -> None:
         return
 
     _, responses = result
-    full_text = T(lang, "record_header", date=display_date) + "\n\n" + format_tp_body(lang, responses)
+    full_text = T(lang, "record_header", date=display_date) + "\n\n" + format_body(slug, lang, responses)
     kb = back_to_hist_action_kb(lang, slug, "view")
     try:
         await callback.message.edit_text(full_text, reply_markup=kb, parse_mode="HTML")
@@ -334,18 +337,21 @@ async def cb_hist_edit_field(
     date_str = parts[2]
     field = parts[3]
 
+    schema_field = get_field(slug, field)
+    if schema_field is None:
+        await callback.answer()
+        return
+
     await state.set_state(EditAnswer.editing)
     await state.update_data(slug=slug, date_str=date_str, field=field, is_custom=False)
 
-    if field in SCALE_FIELDS:
+    if schema_field.type == FieldType.SCALE:
         kb = edit_scale_kb(lang, field)
-        await callback.message.answer(T(lang, "hist_edit_field_ask"), reply_markup=kb)
-    elif field in CHOICE_FIELDS:
-        kb = edit_choice_kb(lang, field)
-        await callback.message.answer(T(lang, "hist_edit_field_ask"), reply_markup=kb)
-    else:
+    elif schema_field.type == FieldType.CHOICE:
+        kb = edit_choice_kb(lang, field, options_key=schema_field.options_key)
+    else:  # TEXT
         kb = edit_text_cancel_kb(lang)
-        await callback.message.answer(T(lang, "hist_edit_field_ask"), reply_markup=kb)
+    await callback.message.answer(T(lang, "hist_edit_field_ask"), reply_markup=kb)
     await callback.answer()
 
 
@@ -375,10 +381,15 @@ async def cb_edit_choice(callback: CallbackQuery, state: FSMContext, pool: async
     parts = callback.data.split(":")
     field = parts[1]
     idx = int(parts[2])
-    options: list[str] = T(lang, f"{field}s")
-    value = options[idx] if idx < len(options) else options[0]
 
     data = await state.get_data()
+    slug = data.get("slug", DEFAULT_SLUG)
+    schema_field = get_field(slug, field)
+    options_key = (schema_field.options_key if schema_field and schema_field.options_key
+                   else f"{field}s")
+    options: list[str] = T(lang, options_key)
+    value = options[idx] if 0 <= idx < len(options) else options[0]
+
     await state.clear()
     await _save_field(callback, pool, lang, callback.from_user.id, data, field, value)
 
@@ -405,8 +416,11 @@ async def cb_edit_text(message: Message, state: FSMContext, pool: asyncpg.Pool) 
     lang = await db.get_lang(pool, message.from_user.id)
     data = await state.get_data()
     field = data.get("field", "")
+    slug = data.get("slug", DEFAULT_SLUG)
+    schema_field = get_field(slug, field)
+    is_text = schema_field is not None and schema_field.type == FieldType.TEXT
 
-    if field not in TEXT_FIELDS and not data.get("is_custom"):
+    if not is_text and not data.get("is_custom"):
         return
 
     value = (message.text or "").strip()
@@ -426,7 +440,7 @@ async def cb_edit_cancel(callback: CallbackQuery, state: FSMContext, pool: async
     lang = await db.get_lang(pool, callback.from_user.id)
     data = await state.get_data()
     await state.clear()
-    slug = data.get("slug", TP_SLUG)
+    slug = data.get("slug", DEFAULT_SLUG)
     date_str = data.get("date_str", "")
     try:
         await callback.message.edit_reply_markup(reply_markup=None)
@@ -448,7 +462,7 @@ async def _save_field(
     field: str,
     value,
 ) -> None:
-    slug = state_data.get("slug", TP_SLUG)
+    slug = state_data.get("slug", DEFAULT_SLUG)
     date_str = state_data.get("date_str", "")
 
     act = await db.get_activity_by_slug(pool, slug)
@@ -463,7 +477,8 @@ async def _save_field(
     raw = session["responses"]
     responses = json.loads(raw) if isinstance(raw, str) else dict(raw)
 
-    if field in TEXT_FIELDS | CHOICE_FIELDS and isinstance(value, str):
+    schema_field = get_field(slug, field)
+    if schema_field and is_encrypted_type(schema_field.type) and isinstance(value, str):
         responses[field] = config.encrypt(user_id, value)
     else:
         responses[field] = value
@@ -514,7 +529,7 @@ async def receive_date_webapp(message: Message, state: FSMContext, pool: asyncpg
 
     data = await state.get_data()
     await state.clear()
-    slug = data.get("slug", TP_SLUG)
+    slug = data.get("slug", DEFAULT_SLUG)
     action = data.get("action", "view")
     date_str = session_date.isoformat()
     display_date = session_date.strftime("%d.%m.%Y")
@@ -527,7 +542,7 @@ async def receive_date_webapp(message: Message, state: FSMContext, pool: asyncpg
     # Restore main reply keyboard (date picker KB is one_time but explicit restore is cleaner)
     await message.answer("📅 " + display_date, reply_markup=main_kb(lang))
 
-    result = await _get_session_and_responses(pool, message.from_user.id, act["id"], session_date)
+    result = await _get_session_and_responses(pool, message.from_user.id, act["id"], session_date, slug)
 
     if action == "edit":
         if not result:
@@ -565,7 +580,7 @@ async def receive_date_webapp(message: Message, state: FSMContext, pool: asyncpg
         return
 
     _, responses = result
-    full_text = T(lang, "record_header", date=display_date) + "\n\n" + format_tp_body(lang, responses)
+    full_text = T(lang, "record_header", date=display_date) + "\n\n" + format_body(slug, lang, responses)
     await message.answer(
         full_text,
         reply_markup=back_to_hist_action_kb(lang, slug, "view"),

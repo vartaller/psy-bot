@@ -19,7 +19,7 @@ from keyboards import (
     text_cancel_kb,
 )
 from states import ThinkingPattern
-from texts import T, format_tp_summary
+from texts import T, format_summary
 
 log = logging.getLogger(__name__)
 router = Router()
@@ -356,7 +356,7 @@ async def step_idea(message: Message, state: FSMContext, pool: asyncpg.Pool) -> 
         await db.complete_session(pool, session_id, encrypted)
         log.info("user=%d session=%s completed", uid, session_id)
 
-    summary = format_tp_summary(lang, plain, data.get("session_date", ""))
+    summary = format_summary(TP_SLUG, lang, plain, data.get("session_date", ""))
     await message.answer(summary, parse_mode="HTML")
 
 
