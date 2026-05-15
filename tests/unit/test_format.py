@@ -55,3 +55,18 @@ def test_format_summary_includes_date_and_body():
     assert "15.05.2026" in out
     assert "tightness in chest" in out
     assert "anxiety" in out
+
+
+def test_format_body_works_for_individuality_cards():
+    """Schema-driven render must work for activities without block headers."""
+    from texts import format_body
+    responses = {"q1": "Відповідь 1", "q2": "власна", "q3": "Відповідь 2"}
+    out = format_body("individuality_cards", "uk", responses)
+    assert "Відповідь 1" in out
+    assert "власна" in out
+    assert "Відповідь 2" in out
+
+
+def test_format_body_unknown_slug_returns_empty():
+    from texts import format_body
+    assert format_body("no_such_slug", "uk", {}) == ""

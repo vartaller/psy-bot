@@ -157,3 +157,27 @@ def test_activity_detail_kb_unsubscribed_shows_subscribe():
     callbacks = _all_callback_data(kb)
     assert "sub:thinking_pattern" in callbacks
     assert "act_list" in callbacks
+
+
+@pytest.mark.parametrize("lang", ["uk", "ru"])
+def test_edit_record_kb_for_individuality_cards(lang):
+    """Schema-driven edit KB must produce one row per field for a different activity."""
+    responses = {"q1": "Відповідь 1", "q2": "своє", "q3": "Відповідь 2"}
+    kb = keyboards.edit_record_kb(lang, "individuality_cards", "2026-05-15", responses)
+    _validate_callbacks(kb)
+    callbacks = _all_callback_data(kb)
+    for q in ("q1", "q2", "q3"):
+        assert f"hist_edit_field:individuality_cards:2026-05-15:{q}" in callbacks
+    assert "hist_action:individuality_cards:edit" in callbacks
+
+
+@pytest.mark.parametrize("lang", ["uk", "ru"])
+def test_choice_kb_with_explicit_options_key_and_prefix(lang):
+    """New activity uses non-legacy options key + custom callback prefix."""
+    kb = keyboards.choice_kb(lang, "q1", options_key="ic_q1_options",
+                             callback_prefix="ic", cancel_callback="ic_cancel")
+    _validate_callbacks(kb)
+    callbacks = _all_callback_data(kb)
+    assert any(c.startswith("ic_choice:q1:") for c in callbacks)
+    assert "ic_custom:q1" in callbacks
+    assert "ic_cancel" in callbacks

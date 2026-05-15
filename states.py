@@ -32,3 +32,12 @@ class HistoryStates(StatesGroup):
 
 class EditAnswer(StatesGroup):
     editing = State()    # waiting for text input (text fields or custom choice)
+
+
+class IndividualityCards(StatesGroup):
+    q1 = State()
+    q1_custom = State()
+    q2 = State()
+    q2_custom = State()
+    q3 = State()
+    q3_custom = State()

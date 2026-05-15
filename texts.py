@@ -103,27 +103,44 @@ def _stars(n: int) -> str:
     return "⭐" * n + "☆" * (5 - n)
 
 
-def format_tp_body(lang: str, responses: dict) -> str:
-    """Format the three blocks without the header line."""
-    labels = T(lang, "tp_field_labels")
-    lines = [
-        T(lang, "tp_block1_header"),
-        f"  {labels['irritation']}: {_stars(responses.get('irritation', 0))} ({responses.get('irritation', '?')}/5)",
-        f"  {labels['excitement']}: {_stars(responses.get('excitement', 0))} ({responses.get('excitement', '?')}/5)",
-        f"  {labels['sensation']}: {responses.get('sensation', '—')}",
-        "",
-        T(lang, "tp_block2_header"),
-        f"  {labels['feeling']}: {responses.get('feeling', '—')}",
-        f"  {labels['emotion']}: {responses.get('emotion', '—')}",
-        f"  {labels['impression']}: {responses.get('impression', '—')}",
-        "",
-        T(lang, "tp_block3_header"),
-        f"  {labels['meaning']}: {responses.get('meaning', '—')}",
-        f"  {labels['idea']}: {responses.get('idea', '—')}",
-    ]
+def format_body(slug: str, lang: str, responses: dict) -> str:
+    """Schema-driven render of an activity's responses.
+
+    Walks the activity's field schema (see activities.SCHEMAS) and renders each
+    field with its label. Inserts block headers wherever a field declares one.
+    Scale fields are rendered as star ratings; other fields show their value
+    (or — if missing).
+    """
+    from activities import FieldType, get_schema
+
+    lines: list[str] = []
+    for f in get_schema(slug):
+        if f.block_header_key:
+            if lines:
+                lines.append("")  # blank line between blocks
+            lines.append(T(lang, f.block_header_key))
+
+        label = T(lang, f.label_key)
+        value = responses.get(f.name, "—")
+
+        if f.type == FieldType.SCALE:
+            n = value if isinstance(value, int) else 0
+            lines.append(f"  {label}: {_stars(n)} ({value if value != '—' else '?'}/5)")
+        else:
+            lines.append(f"  {label}: {value if value not in (None, '') else '—'}")
+
     return "\n".join(lines)
 
 
+def format_summary(slug: str, lang: str, responses: dict, date_str: str) -> str:
+    """Full completion message: shared header + schema-driven body."""
+    return T(lang, "summary_header", date_str) + "\n\n" + format_body(slug, lang, responses)
+
+
+# Back-compat shims — keep the old names working for any external callers / tests.
+def format_tp_body(lang: str, responses: dict) -> str:
+    return format_body("thinking_pattern", lang, responses)
+
+
 def format_tp_summary(lang: str, responses: dict, date_str: str) -> str:
-    """Full completion message: header + body."""
-    return T(lang, "tp_summary_header", date_str) + "\n\n" + format_tp_body(lang, responses)
+    return format_summary("thinking_pattern", lang, responses, date_str)

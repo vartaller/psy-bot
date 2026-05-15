@@ -62,20 +62,27 @@ def scale_kb(lang: str, field: str) -> InlineKeyboardMarkup:
     ])
 
 
-def choice_kb(lang: str, field: str) -> InlineKeyboardMarkup:
-    options: list[str] = T(lang, f"{field}s")
+def choice_kb(lang: str, field: str, options_key: str | None = None,
+              callback_prefix: str = "tp", cancel_callback: str = "tp_cancel") -> InlineKeyboardMarkup:
+    """Choice keyboard with N options + custom + cancel.
+
+    Callbacks: f"{callback_prefix}_choice:{field}:{i}"  /  f"{callback_prefix}_custom:{field}"
+    """
+    if options_key is None:
+        options_key = f"{field}s"  # legacy convention used by thinking_pattern
+    options: list[str] = T(lang, options_key)
     rows = []
     row = []
     for i, opt in enumerate(options):
-        row.append(InlineKeyboardButton(text=opt, callback_data=f"tp_choice:{field}:{i}"))
+        row.append(InlineKeyboardButton(text=opt, callback_data=f"{callback_prefix}_choice:{field}:{i}"))
         if len(row) == 3:
             rows.append(row)
             row = []
     if row:
         rows.append(row)
     rows.append([
-        InlineKeyboardButton(text=T(lang, "custom_option"), callback_data=f"tp_custom:{field}"),
-        InlineKeyboardButton(text=T(lang, "cancel_btn"),    callback_data="tp_cancel"),
+        InlineKeyboardButton(text=T(lang, "custom_option"), callback_data=f"{callback_prefix}_custom:{field}"),
+        InlineKeyboardButton(text=T(lang, "cancel_btn"),    callback_data=cancel_callback),
     ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -222,14 +229,14 @@ def _trunc(val, n: int = 22) -> str:
 
 
 def edit_record_kb(lang: str, slug: str, date_str: str, responses: dict) -> InlineKeyboardMarkup:
-    labels = T(lang, "tp_field_labels")
-    field_order = ["irritation", "excitement", "sensation", "feeling", "emotion", "impression", "meaning", "idea"]
+    from activities import get_schema
+
     rows = []
-    for field in field_order:
-        val = responses.get(field, "—")
+    for f in get_schema(slug):
+        val = responses.get(f.name, "—")
         rows.append([InlineKeyboardButton(
-            text=f"{labels[field]}: {_trunc(val)}",
-            callback_data=f"hist_edit_field:{slug}:{date_str}:{field}",
+            text=f"{T(lang, f.label_key)}: {_trunc(val)}",
+            callback_data=f"hist_edit_field:{slug}:{date_str}:{f.name}",
         )])
     rows.append([InlineKeyboardButton(
         text=T(lang, "back"),
@@ -246,8 +253,10 @@ def edit_scale_kb(lang: str, field: str) -> InlineKeyboardMarkup:
     ])
 
 
-def edit_choice_kb(lang: str, field: str) -> InlineKeyboardMarkup:
-    options: list[str] = T(lang, f"{field}s")
+def edit_choice_kb(lang: str, field: str, options_key: str | None = None) -> InlineKeyboardMarkup:
+    if options_key is None:
+        options_key = f"{field}s"  # legacy convention
+    options: list[str] = T(lang, options_key)
     rows = []
     row = []
     for i, opt in enumerate(options):
