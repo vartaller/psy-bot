@@ -27,6 +27,9 @@ from tests.conftest import make_callback, make_message
 
 TP_SLUG = "thinking_pattern"
 
+# Same loop as the session-scoped db_pool fixture.
+pytestmark = pytest.mark.asyncio(loop_scope="session")
+
 
 async def _activity_id(pool) -> int:
     row = await pool.fetchrow("SELECT id FROM activity_types WHERE slug = $1", TP_SLUG)

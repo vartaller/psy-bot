@@ -19,6 +19,11 @@ import db
 
 TP_SLUG = "thinking_pattern"
 
+# Pin all tests in this module to the session-scoped event loop so they share
+# the same loop as the session-scoped db_pool fixture (asyncpg connections
+# can't cross loops).
+pytestmark = pytest.mark.asyncio(loop_scope="session")
+
 
 async def _activity_id(pool) -> int:
     row = await pool.fetchrow("SELECT id FROM activity_types WHERE slug = $1", TP_SLUG)
