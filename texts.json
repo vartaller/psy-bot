@@ -92,7 +92,17 @@
     "no_record_for_date": "📭 За {date} запис відсутній.",
     "record_header": "📋 <b>Запис за {date}</b>",
     "hist_day_done": "✅ {date}",
-    "hist_day_miss": "⬜ {date}"
+    "hist_day_miss": "⬜ {date}",
+
+    "hist_action_title": "Оберіть дію:",
+    "btn_hist_view": "👁 Переглянути",
+    "btn_hist_edit": "✏️ Змінити",
+    "btn_hist_delete": "🗑 Видалити",
+    "hist_confirm_delete": "🗑 Видалити запис за <b>{date}</b>?",
+    "hist_deleted": "✅ Запис видалено.",
+    "hist_edit_title": "✏️ <b>Редагування — {date}</b>\n\nОберіть поле для зміни:",
+    "hist_edit_field_ask": "Введіть нове значення:",
+    "hist_edit_saved": "✅ Збережено."
   },
 
   "ru": {
@@ -188,6 +198,16 @@
     "no_record_for_date": "📭 За {date} запись отсутствует.",
     "record_header": "📋 <b>Запись за {date}</b>",
     "hist_day_done": "✅ {date}",
-    "hist_day_miss": "⬜ {date}"
+    "hist_day_miss": "⬜ {date}",
+
+    "hist_action_title": "Выберите действие:",
+    "btn_hist_view": "👁 Просмотреть",
+    "btn_hist_edit": "✏️ Изменить",
+    "btn_hist_delete": "🗑 Удалить",
+    "hist_confirm_delete": "🗑 Удалить запись за <b>{date}</b>?",
+    "hist_deleted": "✅ Запись удалена.",
+    "hist_edit_title": "✏️ <b>Редактирование — {date}</b>\n\nВыберите поле для изменения:",
+    "hist_edit_field_ask": "Введите новое значение:",
+    "hist_edit_saved": "✅ Сохранено."
   }
 }

@@ -174,6 +174,25 @@ async def reset_session(pool: asyncpg.Pool, session_id: str) -> None:
     )
 
 
+async def update_session_responses(pool: asyncpg.Pool, session_id: str, responses: dict) -> None:
+    await pool.execute(
+        "UPDATE sessions SET responses = $2 WHERE id = $1::uuid",
+        session_id, json.dumps(responses),
+    )
+
+
+async def delete_session(
+    pool: asyncpg.Pool,
+    user_id: int,
+    activity_type_id: int,
+    session_date,
+) -> None:
+    await pool.execute(
+        "DELETE FROM sessions WHERE user_id = $1 AND activity_type_id = $2 AND session_date = $3",
+        user_id, activity_type_id, session_date,
+    )
+
+
 async def get_recent_sessions(
     pool: asyncpg.Pool,
     user_id: int,

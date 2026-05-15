@@ -28,3 +28,7 @@ class ThinkingPattern(StatesGroup):
 
 class HistoryStates(StatesGroup):
     waiting_date = State()
+
+
+class EditAnswer(StatesGroup):
+    editing = State()    # waiting for text input (text fields or custom choice)
