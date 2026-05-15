@@ -227,6 +227,13 @@ async def cb_hist_action(callback: CallbackQuery, pool: asyncpg.Pool) -> None:
     await send_history(callback, pool, lang, callback.from_user.id, slug, action)
 
 
+@router.callback_query(F.data.startswith("hist_picker:"))
+async def cb_hist_picker(callback: CallbackQuery, pool: asyncpg.Pool) -> None:
+    lang = await db.get_lang(pool, callback.from_user.id)
+    slug = callback.data.split(":", 1)[1]
+    await send_action_picker(callback, pool, lang, callback.from_user.id, slug)
+
+
 # ============================================================
 # Route: back button from day record (old-style)
 # ============================================================

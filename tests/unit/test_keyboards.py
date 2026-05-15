@@ -84,7 +84,7 @@ def test_history_kb_includes_action_in_callbacks(lang):
     assert any(c == "hist_day:thinking_pattern:2026-05-10:edit" for c in callbacks)
     assert any(c == "hist_day:thinking_pattern:2026-05-11:edit" for c in callbacks)
     assert "hist_enter_date:thinking_pattern:edit" in callbacks
-    assert "hist_action:thinking_pattern:edit" in callbacks  # back button
+    assert "hist_picker:thinking_pattern" in callbacks  # back button
 
 
 @pytest.mark.parametrize("lang", ["uk", "ru"])
@@ -118,8 +118,8 @@ def test_confirm_delete_kb_yes_no(lang):
     _validate_callbacks(kb)
     callbacks = _all_callback_data(kb)
     assert "hist_delete_yes:thinking_pattern:2026-05-15" in callbacks
-    # "No" goes back to delete date picker
-    assert "hist_action:thinking_pattern:delete" in callbacks
+    # "No" goes back to action picker
+    assert "hist_picker:thinking_pattern" in callbacks
 
 
 @pytest.mark.parametrize("lang", ["uk", "ru"])
@@ -168,7 +168,7 @@ def test_edit_record_kb_for_individuality_cards(lang):
     callbacks = _all_callback_data(kb)
     for q in ("q1", "q2", "q3"):
         assert f"hist_edit_field:individuality_cards:2026-05-15:{q}" in callbacks
-    assert "hist_action:individuality_cards:edit" in callbacks
+    assert "hist_picker:individuality_cards" in callbacks
 
 
 @pytest.mark.parametrize("lang", ["uk", "ru"])

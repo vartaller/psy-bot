@@ -206,14 +206,14 @@ def history_kb(lang: str, slug: str, recent_sessions: list, today: date, action:
     )])
     rows.append([InlineKeyboardButton(
         text=T(lang, "back"),
-        callback_data=f"hist_action:{slug}:{action}",
+        callback_data=f"hist_picker:{slug}",
     )])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def back_to_hist_action_kb(lang: str, slug: str, action: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text=T(lang, "back"), callback_data=f"hist_action:{slug}:{action}"),
+        InlineKeyboardButton(text=T(lang, "back"), callback_data=f"hist_picker:{slug}"),
     ]])
 
 
@@ -240,7 +240,7 @@ def edit_record_kb(lang: str, slug: str, date_str: str, responses: dict) -> Inli
         )])
     rows.append([InlineKeyboardButton(
         text=T(lang, "back"),
-        callback_data=f"hist_action:{slug}:edit",
+        callback_data=f"hist_picker:{slug}",
     )])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -282,5 +282,5 @@ def edit_text_cancel_kb(lang: str) -> InlineKeyboardMarkup:
 def confirm_delete_kb(lang: str, slug: str, date_str: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(text=T(lang, "yes_btn"), callback_data=f"hist_delete_yes:{slug}:{date_str}"),
-        InlineKeyboardButton(text=T(lang, "no_btn"),  callback_data=f"hist_action:{slug}:delete"),
+        InlineKeyboardButton(text=T(lang, "no_btn"),  callback_data=f"hist_picker:{slug}"),
     ]])
