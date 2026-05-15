@@ -162,7 +162,16 @@ def already_done_kb(lang: str, slug: str, session_date: str) -> InlineKeyboardMa
     ]])
 
 
-def history_kb(lang: str, slug: str, recent_sessions: list, today: date) -> InlineKeyboardMarkup:
+def history_action_kb(lang: str, slug: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=T(lang, "btn_hist_view"),   callback_data=f"hist_action:{slug}:view")],
+        [InlineKeyboardButton(text=T(lang, "btn_hist_edit"),   callback_data=f"hist_action:{slug}:edit")],
+        [InlineKeyboardButton(text=T(lang, "btn_hist_delete"), callback_data=f"hist_action:{slug}:delete")],
+        [InlineKeyboardButton(text=T(lang, "back"),            callback_data=f"act_detail:{slug}")],
+    ])
+
+
+def history_kb(lang: str, slug: str, recent_sessions: list, today: date, action: str = "view") -> InlineKeyboardMarkup:
     rows = []
     for s in recent_sessions:
         d = s["session_date"]
@@ -170,21 +179,88 @@ def history_kb(lang: str, slug: str, recent_sessions: list, today: date) -> Inli
                   date=d.strftime("%d.%m"))
         rows.append([InlineKeyboardButton(
             text=label,
-            callback_data=f"hist_day:{slug}:{d.isoformat()}",
+            callback_data=f"hist_day:{slug}:{d.isoformat()}:{action}",
         )])
 
     rows.append([InlineKeyboardButton(
         text=T(lang, "btn_enter_date"),
-        callback_data=f"hist_enter_date:{slug}",
+        callback_data=f"hist_enter_date:{slug}:{action}",
     )])
     rows.append([InlineKeyboardButton(
         text=T(lang, "back"),
-        callback_data=f"act_detail:{slug}",
+        callback_data=f"hist_action:{slug}:{action}",
     )])
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def back_to_hist_action_kb(lang: str, slug: str, action: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=T(lang, "back"), callback_data=f"hist_action:{slug}:{action}"),
+    ]])
 
 
 def back_to_history_kb(lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(text=T(lang, "back"), callback_data="hist_back"),
+    ]])
+
+
+def _trunc(val, n: int = 22) -> str:
+    s = str(val)
+    return s if len(s) <= n else s[:n - 1] + "…"
+
+
+def edit_record_kb(lang: str, slug: str, date_str: str, responses: dict) -> InlineKeyboardMarkup:
+    labels = T(lang, "tp_field_labels")
+    field_order = ["irritation", "excitement", "sensation", "feeling", "emotion", "impression", "meaning", "idea"]
+    rows = []
+    for field in field_order:
+        val = responses.get(field, "—")
+        rows.append([InlineKeyboardButton(
+            text=f"{labels[field]}: {_trunc(val)}",
+            callback_data=f"hist_edit_field:{slug}:{date_str}:{field}",
+        )])
+    rows.append([InlineKeyboardButton(
+        text=T(lang, "back"),
+        callback_data=f"hist_action:{slug}:edit",
+    )])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def edit_scale_kb(lang: str, field: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=str(i), callback_data=f"edit_scale:{field}:{i}") for i in range(1, 6)],
+        [InlineKeyboardButton(text=T(lang, "scale_hint"), callback_data="noop")],
+        [InlineKeyboardButton(text=T(lang, "cancel_btn"), callback_data="edit_cancel")],
+    ])
+
+
+def edit_choice_kb(lang: str, field: str) -> InlineKeyboardMarkup:
+    options: list[str] = T(lang, f"{field}s")
+    rows = []
+    row = []
+    for i, opt in enumerate(options):
+        row.append(InlineKeyboardButton(text=opt, callback_data=f"edit_choice:{field}:{i}"))
+        if len(row) == 3:
+            rows.append(row)
+            row = []
+    if row:
+        rows.append(row)
+    rows.append([
+        InlineKeyboardButton(text=T(lang, "custom_option"), callback_data=f"edit_custom:{field}"),
+        InlineKeyboardButton(text=T(lang, "cancel_btn"),    callback_data="edit_cancel"),
+    ])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def edit_text_cancel_kb(lang: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=T(lang, "cancel_btn"), callback_data="edit_cancel"),
+    ]])
+
+
+def confirm_delete_kb(lang: str, slug: str, date_str: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=T(lang, "yes_btn"), callback_data=f"hist_delete_yes:{slug}:{date_str}"),
+        InlineKeyboardButton(text=T(lang, "no_btn"),  callback_data=f"hist_action:{slug}:delete"),
     ]])
