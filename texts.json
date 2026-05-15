@@ -102,7 +102,9 @@
     "hist_deleted": "✅ Запис видалено.",
     "hist_edit_title": "✏️ <b>Редагування — {date}</b>\n\nОберіть поле для зміни:",
     "hist_edit_field_ask": "Введіть нове значення:",
-    "hist_edit_saved": "✅ Збережено."
+    "hist_edit_saved": "✅ Збережено.",
+    "btn_pick_date": "📅 Обрати дату",
+    "date_picker_prompt": "📅 Оберіть дату на календарі:"
   },
 
   "ru": {
@@ -208,6 +210,8 @@
     "hist_deleted": "✅ Запись удалена.",
     "hist_edit_title": "✏️ <b>Редактирование — {date}</b>\n\nВыберите поле для изменения:",
     "hist_edit_field_ask": "Введите новое значение:",
-    "hist_edit_saved": "✅ Сохранено."
+    "hist_edit_saved": "✅ Сохранено.",
+    "btn_pick_date": "📅 Выбрать дату",
+    "date_picker_prompt": "📅 Выберите дату в календаре:"
   }
 }

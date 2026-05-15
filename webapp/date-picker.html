@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Вибір дати</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--tg-theme-bg-color, #ffffff);
+      color: var(--tg-theme-text-color, #000000);
+      min-height: 100vh;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 360px;
+      margin-bottom: 16px;
+    }
+
+    .nav-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      border: none;
+      background: var(--tg-theme-button-color, #2481cc);
+      color: var(--tg-theme-button-text-color, #ffffff);
+      font-size: 22px;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .nav-btn:active { opacity: 0.7; }
+    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .month-title {
+      font-size: 18px;
+      font-weight: 500;
+      flex: 1;
+      text-align: center;
+      color: var(--tg-theme-text-color, #000);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      width: 100%;
+      max-width: 360px;
+    }
+
+    .dow {
+      text-align: center;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--tg-theme-hint-color, #888);
+      padding: 8px 0;
+      text-transform: uppercase;
+    }
+
+    .day {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      border: none;
+      background: transparent;
+      color: var(--tg-theme-text-color, #000);
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .day:active { opacity: 0.7; }
+    .day.empty { visibility: hidden; }
+    .day.future {
+      color: var(--tg-theme-hint-color, #ccc);
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
+    .day.today {
+      background: var(--tg-theme-button-color, #2481cc);
+      color: var(--tg-theme-button-text-color, #ffffff);
+      font-weight: 600;
+    }
+    .day:not(.future):not(.today):hover {
+      background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+    }
+
+    .hint {
+      margin-top: 24px;
+      font-size: 13px;
+      color: var(--tg-theme-hint-color, #888);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <button class="nav-btn" id="prevBtn" onclick="navigate(-1)">‹</button>
+    <div class="month-title" id="monthTitle"></div>
+    <button class="nav-btn" id="nextBtn" onclick="navigate(1)">›</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="hint" id="hint"></div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+    tg.disableClosingConfirmation();
+
+    const params = new URLSearchParams(window.location.search);
+    const lang = params.get('lang') || tg.initDataUnsafe?.user?.language_code || 'uk';
+    const L = (lang === 'ru') ? 'ru' : 'uk';
+
+    const MONTHS = {
+      uk: ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'],
+      ru: ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'],
+    };
+    const DOW = {
+      uk: ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'],
+      ru: ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
+    };
+    const HINT = {
+      uk: 'Натисніть день, щоб обрати',
+      ru: 'Нажмите день, чтобы выбрать',
+    };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let viewYear = today.getFullYear();
+    let viewMonth = today.getMonth();
+
+    document.getElementById('hint').textContent = HINT[L];
+
+    function render() {
+      document.getElementById('monthTitle').textContent = `${MONTHS[L][viewMonth]} ${viewYear}`;
+
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+
+      // Day-of-week headers
+      for (const d of DOW[L]) {
+        const el = document.createElement('div');
+        el.className = 'dow';
+        el.textContent = d;
+        grid.appendChild(el);
+      }
+
+      const firstOfMonth = new Date(viewYear, viewMonth, 1);
+      // JS: Sunday = 0; we want Monday = 0
+      const startOffset = (firstOfMonth.getDay() + 6) % 7;
+      const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+      for (let i = 0; i < startOffset; i++) {
+        const el = document.createElement('button');
+        el.className = 'day empty';
+        grid.appendChild(el);
+      }
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const cellDate = new Date(viewYear, viewMonth, d);
+        cellDate.setHours(0, 0, 0, 0);
+        const btn = document.createElement('button');
+        btn.className = 'day';
+        btn.textContent = String(d);
+
+        if (cellDate.getTime() > today.getTime()) {
+          btn.classList.add('future');
+          btn.disabled = true;
+        } else if (cellDate.getTime() === today.getTime()) {
+          btn.classList.add('today');
+        }
+
+        btn.onclick = () => select(cellDate);
+        grid.appendChild(btn);
+      }
+
+      // Disable next button if we're at the current month
+      const nextBtn = document.getElementById('nextBtn');
+      const atCurrent = (viewYear === today.getFullYear() && viewMonth === today.getMonth());
+      nextBtn.disabled = atCurrent;
+    }
+
+    function navigate(delta) {
+      viewMonth += delta;
+      if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+      else if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+      render();
+    }
+
+    function select(d) {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      tg.sendData(JSON.stringify({ date: `${yyyy}-${mm}-${dd}` }));
+    }
+
+    render();
+  </script>
+</body>
+</html>

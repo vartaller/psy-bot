@@ -128,6 +128,17 @@ def activity_detail_kb(lang: str, slug: str, subscription) -> InlineKeyboardMark
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
+def date_picker_webapp_kb(lang: str) -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(
+            text=T(lang, "btn_pick_date"),
+            web_app=WebAppInfo(url=f"{WEBAPP_BASE_URL}/webapp/date-picker.html?lang={lang}"),
+        )]],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+
+
 def reminder_time_webapp_kb(lang: str, slug: str) -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(
