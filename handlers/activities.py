@@ -6,13 +6,14 @@ from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
+from aiogram.types import CallbackQuery, Message
 
 import db
 from keyboards import (
     activities_kb,
     activity_detail_kb,
     confirm_unsub_kb,
+    main_kb,
     reminder_time_webapp_kb,
 )
 from states import SubscribeStates
@@ -150,7 +151,7 @@ async def receive_reminder_time(message: Message, state: FSMContext, pool: async
 
     await message.answer(
         T(lang, "sub_done", time=time_str, tz=tz_display),
-        reply_markup=ReplyKeyboardRemove(),
+        reply_markup=main_kb(lang),
         parse_mode="HTML",
     )
     await _show_activity_detail(message, pool, lang, slug, message.from_user.id)
