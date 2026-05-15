@@ -18,12 +18,14 @@ from keyboards import (
     back_to_hist_action_kb,
     back_to_history_kb,
     confirm_delete_kb,
+    date_picker_webapp_kb,
     edit_choice_kb,
     edit_record_kb,
     edit_scale_kb,
     edit_text_cancel_kb,
     history_action_kb,
     history_kb,
+    main_kb,
 )
 from states import EditAnswer, HistoryStates
 from texts import T, activity_name, format_tp_body, tz_name
@@ -252,9 +254,19 @@ async def cb_hist_day(callback: CallbackQuery, pool: asyncpg.Pool) -> None:
     session_date = date.fromisoformat(date_str)
     display_date = session_date.strftime("%d.%m.%Y")
 
+    if action == "edit":
+        await send_edit_record(callback, pool, lang, callback.from_user.id, slug, date_str)
+        return
+
+    result = await _get_session_and_responses(pool, callback.from_user.id, act["id"], session_date)
+
     if action == "delete":
-        text = T(lang, "hist_confirm_delete", date=display_date)
-        kb = confirm_delete_kb(lang, slug, date_str)
+        if not result:
+            text = T(lang, "no_record_for_date", date=display_date)
+            kb = back_to_hist_action_kb(lang, slug, "delete")
+        else:
+            text = T(lang, "hist_confirm_delete", date=display_date)
+            kb = confirm_delete_kb(lang, slug, date_str)
         try:
             await callback.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
         except TelegramBadRequest:
@@ -262,12 +274,7 @@ async def cb_hist_day(callback: CallbackQuery, pool: asyncpg.Pool) -> None:
         await callback.answer()
         return
 
-    if action == "edit":
-        await send_edit_record(callback, pool, lang, callback.from_user.id, slug, date_str)
-        return
-
     # view
-    result = await _get_session_and_responses(pool, callback.from_user.id, act["id"], session_date)
     if not result:
         text = T(lang, "no_record_for_date", date=display_date)
         kb = back_to_hist_action_kb(lang, slug, "view")
@@ -474,7 +481,7 @@ async def _save_field(
 
 
 # ============================================================
-# Route: enter date manually
+# Route: pick date via WebApp calendar
 # ============================================================
 
 @router.callback_query(F.data.startswith("hist_enter_date:"))
@@ -485,20 +492,24 @@ async def cb_enter_date(callback: CallbackQuery, state: FSMContext, pool: asyncp
     action = parts[2] if len(parts) > 2 else "view"
     await state.set_state(HistoryStates.waiting_date)
     await state.update_data(slug=slug, action=action)
-    await callback.message.answer(T(lang, "date_ask"), parse_mode="HTML")
+    await callback.message.answer(
+        T(lang, "date_picker_prompt"),
+        reply_markup=date_picker_webapp_kb(lang),
+        parse_mode="HTML",
+    )
     await callback.answer()
 
 
-@router.message(StateFilter(HistoryStates.waiting_date))
-async def receive_date(message: Message, state: FSMContext, pool: asyncpg.Pool) -> None:
+@router.message(StateFilter(HistoryStates.waiting_date), F.web_app_data)
+async def receive_date_webapp(message: Message, state: FSMContext, pool: asyncpg.Pool) -> None:
     lang = await db.get_lang(pool, message.from_user.id)
-    text = (message.text or "").strip()
 
     try:
-        day, month, year = text.split(".")
-        session_date = date(int(year), int(month), int(day))
+        payload = json.loads(message.web_app_data.data)
+        session_date = date.fromisoformat(payload["date"])
     except Exception:
-        await message.answer(T(lang, "date_invalid"), parse_mode="HTML")
+        await message.answer(T(lang, "error"), reply_markup=main_kb(lang))
+        await state.clear()
         return
 
     data = await state.get_data()
@@ -510,20 +521,41 @@ async def receive_date(message: Message, state: FSMContext, pool: asyncpg.Pool) 
 
     act = await db.get_activity_by_slug(pool, slug)
     if not act:
+        await message.answer(T(lang, "history_no_subs"), reply_markup=main_kb(lang))
         return
 
-    if action == "delete":
-        text = T(lang, "hist_confirm_delete", date=display_date)
-        kb = confirm_delete_kb(lang, slug, date_str)
-        await message.answer(text, reply_markup=kb, parse_mode="HTML")
-        return
+    # Restore main reply keyboard (date picker KB is one_time but explicit restore is cleaner)
+    await message.answer("📅 " + display_date, reply_markup=main_kb(lang))
+
+    result = await _get_session_and_responses(pool, message.from_user.id, act["id"], session_date)
 
     if action == "edit":
+        if not result:
+            await message.answer(
+                T(lang, "no_record_for_date", date=display_date),
+                reply_markup=back_to_hist_action_kb(lang, slug, "edit"),
+                parse_mode="HTML",
+            )
+            return
         await send_edit_record(message, pool, lang, message.from_user.id, slug, date_str)
         return
 
+    if action == "delete":
+        if not result:
+            await message.answer(
+                T(lang, "no_record_for_date", date=display_date),
+                reply_markup=back_to_hist_action_kb(lang, slug, "delete"),
+                parse_mode="HTML",
+            )
+            return
+        await message.answer(
+            T(lang, "hist_confirm_delete", date=display_date),
+            reply_markup=confirm_delete_kb(lang, slug, date_str),
+            parse_mode="HTML",
+        )
+        return
+
     # view
-    result = await _get_session_and_responses(pool, message.from_user.id, act["id"], session_date)
     if not result:
         await message.answer(
             T(lang, "no_record_for_date", date=display_date),
