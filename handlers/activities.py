@@ -58,20 +58,22 @@ async def _show_activity_detail(target, pool: asyncpg.Pool, lang: str, slug: str
 async def cb_act_list(callback: CallbackQuery, pool: asyncpg.Pool) -> None:
     lang = await db.get_lang(pool, callback.from_user.id)
     activities = await db.get_activity_types(pool)
+    log.info("user=%d act_list: found %d activities", callback.from_user.id, len(activities))
     subs = await pool.fetch(
         "SELECT activity_type_id FROM subscriptions WHERE user_id = $1 AND is_active = TRUE",
         callback.from_user.id,
     )
     sub_ids = {s["activity_type_id"] for s in subs}
     subscribed_slugs = {act["slug"] for act in activities if act["id"] in sub_ids}
+    kb = activities_kb(lang, activities, subscribed_slugs)
     try:
         await callback.message.edit_text(
             T(lang, "activities_title"),
-            reply_markup=activities_kb(lang, activities, subscribed_slugs),
+            reply_markup=kb,
             parse_mode="HTML",
         )
     except TelegramBadRequest:
-        pass
+        await callback.message.answer(T(lang, "activities_title"), reply_markup=kb, parse_mode="HTML")
     await callback.answer()
 
 
