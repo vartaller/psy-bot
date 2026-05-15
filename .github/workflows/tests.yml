@@ -1,0 +1,45 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: psybot
+          POSTGRES_PASSWORD: psybot
+          POSTGRES_DB: psybot_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U psybot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      TEST_DATABASE_URL: postgresql://psybot:psybot@localhost:5432/psybot_test
+      BOT_TOKEN: test:stub
+      ENCRYPTION_SECRET: ci-secret-for-tests
+      DATABASE_URL: postgresql://stub/stub
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: pytest -v
