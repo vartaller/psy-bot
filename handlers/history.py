@@ -24,13 +24,11 @@ router = Router()
 TP_SLUG = "thinking_pattern"
 
 
-def _user_today_from_sub(sub) -> date:
-    try:
-        tz = pytz.timezone(sub["timezone"])
-        from datetime import datetime
-        return datetime.now(tz).date()
-    except Exception:
-        return date.today()
+async def _user_today_for(pool, user_id: int) -> date:
+    from datetime import datetime
+    tz_str = await db.get_timezone(pool, user_id)
+    tz = pytz.timezone(tz_str)
+    return datetime.now(tz).date()
 
 
 async def send_history(
@@ -59,7 +57,7 @@ async def send_history(
             await target.answer()
         return
 
-    today = _user_today_from_sub(sub)
+    today = await _user_today_for(pool, user_id)
     recent = await db.get_recent_sessions(pool, user_id, act["id"], limit=5)
     stats = await db.get_stats(pool, user_id, act["id"], sub["subscribed_at"])
 

@@ -54,7 +54,8 @@ async def _start_tp_session(
             await target.answer(text)
         return
 
-    today = _user_today(sub["timezone"])
+    tz = await db.get_timezone(pool, user_id)
+    today = _user_today(tz)
     session = await db.get_session_by_date(pool, user_id, act["id"], today)
 
     if session and session["is_complete"]:
@@ -120,12 +121,17 @@ async def cb_redo(callback: CallbackQuery, state: FSMContext, pool: asyncpg.Pool
 
 @router.callback_query(F.data == "tp_cancel", StateFilter(ThinkingPattern))
 async def cb_cancel(callback: CallbackQuery, state: FSMContext, pool: asyncpg.Pool) -> None:
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    from texts import T as _T
     lang = await db.get_lang(pool, callback.from_user.id)
     await state.clear()
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=_T(lang, "back"), callback_data=f"act_detail:{TP_SLUG}"),
+    ]])
     try:
-        await callback.message.edit_text(T(lang, "tp_cancelled"), reply_markup=None)
+        await callback.message.edit_text(T(lang, "tp_cancelled"), reply_markup=back_kb)
     except TelegramBadRequest:
-        await callback.message.answer(T(lang, "tp_cancelled"))
+        await callback.message.answer(T(lang, "tp_cancelled"), reply_markup=back_kb)
     await callback.answer()
 
 
